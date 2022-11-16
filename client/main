@@ -1,0 +1,478 @@
+local miningZone = false
+local isMining = false
+local MiningLocation = Config.Blips.MiningLocation
+local WashLocation = Config.Blips.WashLocation
+local SmeltLocation = Config.Blips.SmeltLocation
+local SellLocation = Config.Blips.SellLocation
+local miningtimer = Config.MiningTimer
+local washingtimer = Config.WashingTimer
+RegisterNetEvent('esx-mining:getMiningstage', function(stage, state, k)
+  Config.MiningLocation[k][stage] = state
+end)
+
+local function loadAnimDict(dict)
+  while (not HasAnimDictLoaded(dict)) do
+      RequestAnimDict(dict)
+      Wait(3)
+  end
+end
+
+--[[RegisterCommand("stone", function() ---- for testing 
+  TriggerServerEvent('esx-mining:receivedStone')
+end)]]--
+
+RegisterNetEvent('esx-mining:miningwithaxe', function()
+  local ped = PlayerPedId()
+  trpickaxeprop = CreateObject(GetHashKey("prop_tool_jackham"), 0, 0, 0, true, true, true)        
+  AttachEntityToEntity(trpickaxeprop, ped, GetPedBoneIndex(ped, 57005), 0.17, -0.04, -0.04, 180, 100.00, 120.0, true, true, false, true, 1, true)
+  Wait(MiningJob.MiningTimer)
+  DetachEntity(trpickaxeprop, 1, true)
+  DeleteEntity(trpickaxeprop)
+end)
+
+RegisterNetEvent('esx-mining:getpickaxe', function()
+  TriggerServerEvent('esx-mining:BuyPickaxe')
+end)
+
+RegisterNetEvent('esx-mining:getPan', function()
+  TriggerServerEvent('esx-mining:BuyWash')
+end)
+
+RegisterNetEvent('esx-mining:Sellall', function()
+  TriggerServerEvent('esx-mining:Seller')
+end)
+
+
+  RegisterNetEvent('esx-mining:mine', function(data)
+    local mining = data.location
+        if not Config.MiningLocation[mining]["isMined"] and not Config.MiningLocation[mining]["isOccupied"] then
+          ESX.TriggerServerCallback('esx-mining:pickaxe', function(PickAxe)
+            if PickAxe then
+              StartMining(mining)
+            elseif not PickAxe then
+              ESX.ShowNotification(Config.Text['error_mining'])
+            end
+          end)
+        end
+  end)
+
+RegisterNetEvent('esx-mining:washingrocks', function()
+  ESX.TriggerServerCallback('esx-mining:washpan', function(washingpancheck)
+    if washingpancheck then
+      ESX.TriggerServerCallback('esx-mining:stonesbruf', function(stonesbruf)
+        if stonesbruf then
+          local playerPed = PlayerPedId()
+          local coords = GetEntityCoords(playerPed)
+          local rockwash = MiningJob.WashingTimer
+          washrocks() 
+                  if not status then
+              ClearPedTasks(PlayerPedId())
+              propdel()
+              TriggerServerEvent("esx-mining:receivedReward")
+            else
+              ClearPedTasks(PlayerPedId())
+              ESX.ShowNotification(Config.Text['cancel'])
+            end
+          --end)
+        else
+          ESX.ShowNotification(Config.Text['error_minerstone'])
+        end
+      end)
+    else
+      Wait(500)
+      ESX.ShowNotification(Config.Text['error_washpan'])
+    end
+  end)
+end)
+
+RegisterNetEvent('esx-mining:drilling', function()
+  ESX.TriggerServerCallback('esx-mining:pickaxe', function(drillitemcheck)
+    if drillitemcheck then
+        local playerPed = PlayerPedId()
+        local coords = GetEntityCoords(playerPed)
+        local miningtimer = MiningJob.MiningTimer
+        drilling()
+            if not status then
+          ClearPedTasks(PlayerPedId())
+          propdel()
+          TriggerServerEvent('esx-mining:receivedStone')
+        else
+          ClearPedTasks(PlayerPedId())
+          ESX.ShowNotification(Config.Text['cancel'])
+        end
+      --end)
+    else
+      ESX.ShowNotification(Config.Text['error_mining'])
+    end
+  end)
+end)
+
+RegisterNetEvent('esx-mining:SmeltIron', function()
+  ESX.TriggerServerCallback('esx-mining:IronCheck', function(IronCheck)
+    if IronCheck then
+      local iron = MiningJob.IronTimer
+      smeltrocks()
+            if not status then
+          ClearPedTasks(PlayerPedId())
+          propdel()
+          TriggerServerEvent('esx-mining:IronBar')
+        else
+          ClearPedTasks(PlayerPedId())
+          ESX.ShowNotification(Config.Text['cancel'])
+        end
+      --end)
+    else
+      ESX.ShowNotification(Config.Text['error_ironCheck'])
+    end
+  end)
+end)
+
+RegisterNetEvent('esx-mining:SmeltCopper', function()
+  ESX.TriggerServerCallback('esx-mining:CopperCheck', function(CopperCheck)
+    if CopperCheck then
+      local copper = MiningJob.CopperTimer
+      smeltrocks()
+              if not status then
+              ClearPedTasks(PlayerPedId())
+              propdel() 
+          TriggerServerEvent('esx-mining:CopperBar')
+        else
+          ClearPedTasks(PlayerPedId())
+          ESX.ShowNotification(Config.Text['cancel'])
+        end
+      --end)
+    else
+      ESX.ShowNotification(Config.Text['error_copperCheck'])
+    end
+  end)
+end)
+
+RegisterNetEvent('esx-mining:SmeltGold', function()
+  ESX.TriggerServerCallback('esx-mining:GoldCheck', function(GoldCheck)
+    if GoldCheck then
+      local gold = MiningJob.GoldTimer
+      smeltrocks()
+              if not status then
+              ClearPedTasks(PlayerPedId())
+              propdel() 
+          TriggerServerEvent('esx-mining:GoldBar')
+        else
+          ClearPedTasks(PlayerPedId())
+          ESX.ShowNotification(Config.Text['cancel'])
+        end
+      --end)
+    else
+      ESX.ShowNotification(Config.Text['error_goldCheck'])
+    end
+  end)
+end)
+
+CreateThread(function()
+  for k, v in pairs(Config.MiningLocation) do
+    exports.ox_target:addBoxZone({
+      coords = vec3(-587.9084, 2061.4973, 130.8121),
+      size = vec3(2, 2, 2),
+      rotation = 45,
+      debug = drawZones,
+      options = {
+          {
+              name = 'drill',
+              event = 'esx-mining:drilling',
+              icon = 'fa-solid fa-gavel',
+              label = 'DRILL',
+              canInteract = function(entity, distance, coords, name)
+                  return true
+              end
+          },
+      }
+   })
+  end
+  exports.ox_target:addBoxZone({
+    coords = vec3(-588.5142, 2053.6858, 130.2722),
+    size = vec3(2, 2, 2),
+    rotation = 45,
+    debug = drawZones,
+    options = {
+        {
+            name = 'drill',
+            event = 'esx-mining:drilling',
+            icon = 'fa-solid fa-gavel',
+            label = 'DRILL',
+            canInteract = function(entity, distance, coords, name)
+                return true
+            end
+        },
+    }
+ })
+ exports.ox_target:addBoxZone({
+  coords = vec3(-583.8499, 2039.4751, 129.0692),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+          name = 'drill',
+          event = 'esx-mining:drilling',
+          icon = 'fa-solid fa-gavel',
+          label = 'DRILL',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(-600.57, 2092.49, 13.33),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'drill',
+        event = 'esx-mining:drilling',
+        icon = 'fa-solid fa-gavel',
+        label = 'DRILL',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(-572.1044, 2023.6952, 127.8293),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'drill',
+        event = 'esx-mining:drilling',
+        icon = 'fa-solid fa-gavel',
+        label = 'DRILL',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(-561.6225, 2011.5032, 127.2539),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'drill',
+        event = 'esx-mining:drilling',
+        icon = 'fa-solid fa-gavel',
+        label = 'DRILL',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(-600.57, 2092.49, 131.33),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'buydrill',
+        event = 'esx-mining:getpickaxe',
+        icon = 'fa-solid fa-usd',
+        label = 'Buy a Drill',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(59.8913, 3161.8362, 26.1961),
+  size = vec3(5, 5, 5),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'wash',
+        event = 'esx-mining:washingrocks',
+        icon = 'fa fa-refresh fa-spin fa-3x fa-fw',
+        label = 'Wash Dirt off rocks',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(77.17, 3150.86, 29.79),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'washpan',
+        event = 'esx-mining:getPan',
+        icon = 'fa-solid fa-usd',
+        label = 'Get pan used for washing off rocks',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(579.11, -2804.96, 6.06),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'seller',
+        event = 'esx-mining:Sellall',
+        icon = 'fa-solid fa-usd',
+        label = 'Sell ALL mining materials',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+exports.ox_target:addBoxZone({
+  coords = vec3(1085.0836, -2002.4465, 31.3856),
+  size = vec3(2, 2, 2),
+  rotation = 45,
+  debug = drawZones,
+  options = {
+      {
+        name = 'smelt1',
+        event = 'esx-mining:SmeltIron',
+        icon = 'fa fa-cog fa-spin fa-3x fa-fw',
+        label = 'Melt Iron into Bars',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+      {
+        name = 'smelt2',
+        event = 'esx-mining:SmeltCopper',
+        icon = 'fa fa-cog fa-spin fa-3x fa-fw',
+        label = 'Melt Copper into Bars',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+      {
+        name = 'smelt3',
+        event = 'esx-mining:SmeltGold',
+        icon = 'fa fa-cog fa-spin fa-3x fa-fw',
+        label = 'Melt Gold into Bars',
+          canInteract = function(entity, distance, coords, name)
+              return true
+          end
+      },
+  }
+})
+end)
+
+
+-- Start Animation for drilling
+function drilling()
+  ----print("animating")
+  local playerPed = PlayerPedId()
+local drill = GetHashKey('prop_tool_jackham')
+RequestModel(drill)
+while not HasModelLoaded(drill) do
+    Wait(100)
+RequestModel(drill)
+end
+local spawnedProp1 = CreateObject(drill, GetEntityCoords(playerPed), true, true, true)
+AttachEntityToEntity(spawnedProp1, playerPed, GetPedBoneIndex(playerPed, 28422), 0, 0, 0, 0, 1.1, 0.75, true, false, true, false, 1, true)
+RequestAnimDict("amb@world_human_const_drill@male@drill@base")
+while not HasAnimDictLoaded("amb@world_human_const_drill@male@drill@base") do
+Wait(100)
+end
+TaskPlayAnim(playerPed, "amb@world_human_const_drill@male@drill@base", "base", 8.0, 1.0, -1, 1)
+local success = lib.progressBar({
+  duration = MiningJob.MiningTimer,
+  label = 'Drilling Stone',
+  useWhileDead = false,
+  disable = {
+      car = true,
+  },
+})
+RemoveAnimDict("amb@world_human_const_drill@male@drill@base")
+  Citizen.Wait(100)
+  TriggerServerEvent('esx-mining:propdel')
+end
+
+-- Start Animation for washing rocks
+
+function washrocks() 
+  ----print("animating")
+  local playerPed = PlayerPedId()
+local pan = GetHashKey('prop_sponge_01')
+local stone1 = GetHashKey('ng_proc_paper_01a')
+RequestModel(pan)
+RequestModel(stone1)
+while not HasModelLoaded(pan) do
+    Wait(100)
+RequestModel(pan)
+RequestModel(stone1)
+end
+local spawnedProp2 = CreateObject(pan, GetEntityCoords(playerPed), true, true, true)
+local spawnedProp3 = CreateObject(stone1, GetEntityCoords(playerPed), true, true, true)
+AttachEntityToEntity(spawnedProp2, playerPed, GetPedBoneIndex(playerPed, 28422), 0.07, 0.07, 0, -45.0, 2.5, -45.0, true, true, true, false, 1, true)
+AttachEntityToEntity(spawnedProp3, playerPed, GetPedBoneIndex(playerPed, 18905), 0.15, 0.05, 0, 0, 0, -45, true, true, true, false, 1, true)
+RequestAnimDict("amb@world_human_bum_wash@male@high@idle_a")
+while not HasAnimDictLoaded("amb@world_human_bum_wash@male@high@idle_a") do
+Wait(100)
+end
+TaskPlayAnim(playerPed, "amb@world_human_bum_wash@male@high@idle_a", "idle_a", 8.0, 1.0, -1, 1)
+local success = lib.progressBar({
+  duration = MiningJob.WashingTimer,
+  label = 'Scrubbing Dirty Stones',
+  useWhileDead = false,
+  disable = {
+      car = true,
+  },
+})
+RemoveAnimDict("amb@world_human_bum_wash@male@high@idle_a")
+  Citizen.Wait(100)
+  TriggerServerEvent('esx-mining:propdel')
+end
+
+-- Start Animation for smelting rocks
+function smeltrocks()
+  ----print("animating")
+  local playerPed = PlayerPedId()
+local stone2 = GetHashKey('rock_4_cl_2_1')
+RequestModel(stone2)
+while not HasModelLoaded(stone2) do
+    Wait(100)
+RequestModel(stone2)
+end
+local spawnedProp4 = CreateObject(stone2, GetEntityCoords(playerPed), true, true, true)
+AttachEntityToEntity(spawnedProp4, playerPed, GetPedBoneIndex(playerPed, 28422), 0, 0, 0, 0, 0, 0, true, true, true, false, 1, true)
+RequestAnimDict("mp_am_hold_up")
+while not HasAnimDictLoaded("mp_am_hold_up") do
+Wait(100)
+end
+TaskPlayAnim(playerPed, "mp_am_hold_up", "purchase_beerbox_shopkeeper", 8.0, 1.0, -1, 1)
+RemoveAnimDict("mp_am_hold_up")
+  Citizen.Wait(10000)
+  TriggerServerEvent('esx-mining:propdel')
+end
+
+
+function propdel()
+  for k, v in pairs(GetGamePool('CObject')) do
+        if IsEntityAttachedToEntity(PlayerPedId(), v) then
+            SetEntityAsMissionEntity(v, true, true)
+            DeleteObject(v)
+            DeleteEntity(v)
+        end
+    end
+end
