@@ -20,13 +20,6 @@ Download the resource, rename it from esx-mining-main to esx-mining, drag it int
 
 ## Preview Pictures
 - [Youtube Video](https://youtu.be/PO6Tz_52PhM)
-![Preview Screenshot](https://i.imgur.com/jIJ9SOU.png)
-![Preview Screenshot](https://i.imgur.com/mu0gNQC.jpeg)
-![image](https://user-images.githubusercontent.com/102178921/165142626-75b1e6ba-4c4b-415f-b4f5-edb3a678064d.png))
-![image](https://user-images.githubusercontent.com/102178921/165142476-1c5ea064-c3e0-4744-9f25-4868717a72e1.png))
-![Preview Screenshot](https://i.imgur.com/fUQ61Bl.jpeg)
-![Preview Screenshot](https://i.imgur.com/S382wMf.jpeg)
-![Preview Screenshot](https://i.imgur.com/VJCk6cx.jpeg)
 
 ## Discord
 - [ESX](https://discord.com/invite/VKX6DHVyhV)
